@@ -1,0 +1,109 @@
+{
+  "timestamp": "2025-09-10T11:00:51.918Z",
+  "results": [
+    {
+      "test": "Minimal effort",
+      "success": true,
+      "responseTime": 3684,
+      "wordCount": 80,
+      "tokens": 116,
+      "reasoningTokens": 0,
+      "hasReasoning": true
+    },
+    {
+      "test": "Low effort",
+      "success": true,
+      "responseTime": 3256,
+      "wordCount": 82,
+      "tokens": 127,
+      "reasoningTokens": 0,
+      "hasReasoning": true
+    },
+    {
+      "test": "Medium effort",
+      "success": true,
+      "responseTime": 5100,
+      "wordCount": 94,
+      "tokens": 268,
+      "reasoningTokens": 128,
+      "hasReasoning": true
+    },
+    {
+      "test": "High effort",
+      "success": true,
+      "responseTime": 17272,
+      "wordCount": 78,
+      "tokens": 944,
+      "reasoningTokens": 832,
+      "hasReasoning": true
+    },
+    {
+      "test": "Low verbosity",
+      "success": true,
+      "responseTime": 2912,
+      "wordCount": 73,
+      "tokens": 178,
+      "reasoningTokens": 64,
+      "hasReasoning": true
+    },
+    {
+      "test": "Medium verbosity",
+      "success": true,
+      "responseTime": 7976,
+      "wordCount": 205,
+      "tokens": 447,
+      "reasoningTokens": 128,
+      "hasReasoning": true
+    },
+    {
+      "test": "High verbosity",
+      "success": true,
+      "responseTime": 21821,
+      "wordCount": 675,
+      "tokens": 1282,
+      "reasoningTokens": 320,
+      "hasReasoning": true
+    },
+    {
+      "test": "Summary: auto",
+      "success": true,
+      "responseTime": 4722,
+      "wordCount": 30,
+      "tokens": 212,
+      "reasoningTokens": 128,
+      "hasReasoning": true
+    },
+    {
+      "test": "Summary: detailed",
+      "success": true,
+      "responseTime": 3944,
+      "wordCount": 4,
+      "tokens": 175,
+      "reasoningTokens": 128,
+      "hasReasoning": true
+    },
+    {
+      "test": "High reasoning + Low verbosity",
+      "success": true,
+      "responseTime": 49974,
+      "wordCount": 479,
+      "tokens": 3266,
+      "reasoningTokens": 2496,
+      "hasReasoning": true
+    },
+    {
+      "test": "Minimal reasoning + High verbosity + Summary",
+      "success": true,
+      "responseTime": 12042,
+      "wordCount": 551,
+      "tokens": 748,
+      "reasoningTokens": 0,
+      "hasReasoning": true
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "successful": 11,
+    "failed": 0
+  }
+}

@@ -1,0 +1,19 @@
+{
+	"node": "n8n-nodes-openai-gpt5.openAiGpt5",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["AI", "Data & Storage"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://platform.openai.com/docs/api-reference/authentication"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://platform.openai.com/docs/guides/pdf-files"
+			}
+		]
+	},
+	"alias": ["GPT-5", "OpenAI GPT5", "PDF", "Responses API", "File Processing"]
+}

@@ -1,0 +1,43 @@
+# Source files
+src/
+*.ts
+!dist/**/*.d.ts
+
+# Test files
+test-*.js
+*.test.js
+*.spec.js
+test-results-*.json
+gpt5-features-test-*.json
+
+# Development files
+.eslintrc.js
+tsconfig.json
+.gitignore
+.git/
+
+# Documentation files that aren't needed in npm package
+*.md
+!README.md
+!LICENSE
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+
+# Build tools
+.github/
+.gitlab-ci.yml
+.travis.yml

@@ -1,0 +1,53 @@
+{
+  "name": "n8n-nodes-openai-gpt5",
+  "version": "0.3.0",
+  "description": "n8n node for OpenAI GPT-5 with PDF processing via Responses API",
+  "keywords": [
+    "n8n-community-node-package",
+    "openai",
+    "gpt5",
+    "pdf",
+    "ai"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Jez",
+    "email": "jeremy@jezweb.net"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jezweb/n8n-nodes-openai-gpt5"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && cp src/nodes/OpenAiGpt5/*.svg dist/nodes/OpenAiGpt5/",
+    "dev": "n8n-node-dev build --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "prepublishOnly": "npm run build && npm run lint"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/OpenAiGpt5Api.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/OpenAiGpt5/OpenAiGpt5.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "eslint": "^8.54.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.0",
+    "n8n-workflow": "^1.51.0",
+    "typescript": "^5.3.2"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "^1.51.0"
+  }
+}
