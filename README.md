@@ -200,12 +200,18 @@ MIT - See [LICENSE](LICENSE) file for details
 
 ## Changelog
 
+### v0.3.1 (2025-01-10)
+- Fixed response extraction for simplified output
+- Improved input structure for text-only requests
+- Enhanced error handling with detailed messages
+- Fixed response parsing for GPT-5 output structure
+- Removed preamble option (only for tool-calling scenarios)
+
 ### v0.3.0 (2025-01-10)
 - Added verbosity control for GPT-5 models
 - Added reasoning summary support
-- Added preamble configuration
 - Enhanced reasoning effort with all levels
-- Improved error handling
+- Initial error handling improvements
 
 ### v0.2.2 (2025-01-09)
 - Initial public release

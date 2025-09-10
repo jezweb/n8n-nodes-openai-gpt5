@@ -179,6 +179,7 @@ export class OpenAiGpt5 implements INodeType {
 						operation: ['uploadAndProcess', 'processFileId'],
 					},
 				},
+				// eslint-disable-next-line n8n-nodes-base/node-param-collection-type-unsorted-items
 				options: [
 					{
 						displayName: 'Additional Files',
@@ -336,47 +337,6 @@ export class OpenAiGpt5 implements INodeType {
 						},
 					},
 					{
-						displayName: 'Verbosity',
-						name: 'verbosity',
-						type: 'options',
-						options: [
-							{
-								name: 'Low',
-								value: 'low',
-								description: 'Most concise output',
-							},
-							{
-								name: 'Medium',
-								value: 'medium',
-								description: 'Balanced verbosity',
-							},
-							{
-								name: 'High',
-								value: 'high',
-								description: 'More detailed output',
-							},
-						],
-						default: 'medium',
-						description: 'Control how concise the model output will be (GPT-5 only)',
-						displayOptions: {
-							show: {
-								model: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'],
-							},
-						},
-					},
-					{
-						displayName: 'Enable Preamble',
-						name: 'enablePreamble',
-						type: 'boolean',
-						default: false,
-						description: 'Whether to enable thinking/planning before function calls (GPT-5 only)',
-						displayOptions: {
-							show: {
-								model: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'],
-							},
-						},
-					},
-					{
 						displayName: 'Reasoning Summary',
 						name: 'reasoningSummary',
 						type: 'options',
@@ -416,6 +376,35 @@ export class OpenAiGpt5 implements INodeType {
 						},
 						default: 0.7,
 						description: 'Controls randomness in the output',
+					},
+					{
+						displayName: 'Verbosity',
+						name: 'verbosity',
+						type: 'options',
+						options: [
+							{
+								name: 'Low',
+								value: 'low',
+								description: 'Most concise output',
+							},
+							{
+								name: 'Medium',
+								value: 'medium',
+								description: 'Balanced verbosity',
+							},
+							{
+								name: 'High',
+								value: 'high',
+								description: 'More detailed output',
+							},
+						],
+						default: 'medium',
+						description: 'Control how concise the model output will be (GPT-5 only)',
+						displayOptions: {
+							show: {
+								model: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'],
+							},
+						},
 					},
 				],
 			},
@@ -507,11 +496,16 @@ export class OpenAiGpt5 implements INodeType {
 					fileId = this.getNodeParameter('fileId', i) as string;
 				}
 
-				// Step 2: Call Responses API with file ID
+				// Step 2: Call Responses API
 				const model = additionalOptions.model || 'gpt-5';
 				const requestBody: IDataObject = {
 					model,
-					input: [
+				};
+				
+				// Determine input structure based on whether we have files
+				if (operation === 'uploadAndProcess' || operation === 'processFileId') {
+					// Use array structure for file inputs
+					requestBody.input = [
 						{
 							role: 'user',
 							content: [
@@ -525,8 +519,11 @@ export class OpenAiGpt5 implements INodeType {
 								},
 							],
 						},
-					],
-				};
+					];
+				} else {
+					// Use simple string input for text-only requests
+					requestBody.input = prompt;
+				}
 
 				// Add additional files if provided
 				if (additionalOptions.additionalFiles) {
@@ -599,11 +596,6 @@ export class OpenAiGpt5 implements INodeType {
 						}
 						(requestBody.text as IDataObject).verbosity = additionalOptions.verbosity;
 					}
-					
-					// Add preamble configuration
-					if (additionalOptions.enablePreamble) {
-						requestBody.preamble = true;
-					}
 				}
 
 				const responseOptions: IHttpRequestOptions = {
@@ -627,9 +619,22 @@ export class OpenAiGpt5 implements INodeType {
 				let outputData: any;
 				
 				if (simplifyOutput) {
-					// Extract just the essential content
+					// Extract just the essential content from the response structure
+					// GPT-5 responses have structure: output[0].content[0].text
+					let textContent = '';
+					if (response.output && response.output[0]) {
+						const output = response.output[0];
+						if (output.content && output.content[0]) {
+							textContent = output.content[0].text || '';
+						}
+					}
+					// Fallback to other possible structures
+					if (!textContent) {
+						textContent = response.choices?.[0]?.message?.content || '';
+					}
+					
 					outputData = {
-						text: response.output?.[0]?.content || response.choices?.[0]?.message?.content || '',
+						text: textContent,
 						fileId: fileId,
 						model: response.model || model,
 						usage: response.usage,
@@ -649,16 +654,45 @@ export class OpenAiGpt5 implements INodeType {
 				);
 				returnData.push(...executionData);
 
-			} catch (error) {
+			} catch (error: any) {
+				// Extract meaningful error message
+				let errorMessage = 'Unknown error';
+				let errorDetails: any = {};
+				
+				if (error.response) {
+					// HTTP error response
+					errorMessage = error.response.statusText || `HTTP ${error.response.status}`;
+					if (error.response.body) {
+						errorDetails = error.response.body;
+						if (error.response.body.error) {
+							errorMessage = error.response.body.error.message || errorMessage;
+						}
+					}
+				} else if (error.message) {
+					errorMessage = error.message;
+				}
+				
 				if (this.continueOnFail()) {
 					const executionData = this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray({ error: error instanceof Error ? error.message : 'Unknown error' }),
+						this.helpers.returnJsonArray({ 
+							error: errorMessage,
+							details: errorDetails,
+							statusCode: error.response?.status,
+						}),
 						{ itemData: { item: i } }
 					);
 					returnData.push(...executionData);
 					continue;
 				}
-				throw new NodeOperationError(this.getNode(), error instanceof Error ? error : new Error('Unknown error'));
+				
+				const nodeError = new NodeOperationError(
+					this.getNode(), 
+					errorMessage,
+					{ 
+						description: errorDetails.error?.message || undefined,
+					}
+				);
+				throw nodeError;
 			}
 		}
 
