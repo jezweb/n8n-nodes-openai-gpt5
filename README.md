@@ -1,6 +1,6 @@
 # n8n-nodes-openai-gpt5
 
-This is an n8n community node that provides access to OpenAI's GPT-5 models and advanced features through the Responses API. It supports PDF processing, multiple file inputs, and all the latest GPT-5 capabilities including reasoning effort control, verbosity settings, and reasoning summaries.
+This is an n8n community node that provides access to OpenAI's GPT-5 models and advanced features through the Responses API. It supports PDF processing, multiple file inputs, and all the latest GPT-5 capabilities including reasoning effort control, verbosity settings, and reasoning summaries. **Now with AI Agent Tool support!**
 
 ## Features
 
@@ -11,6 +11,7 @@ This is an n8n community node that provides access to OpenAI's GPT-5 models and 
 - 🧠 **Reasoning Summaries**: Get insights into the model's thinking process
 - 🔗 **Multiple File Support**: Process multiple PDFs and images in one request
 - ⚡ **O-Series Models**: Support for O3, O3 Pro, O3 Mini, O4 Mini models
+- 🤖 **AI Agent Tool**: Use as a tool with n8n AI Agent nodes
 
 ## Installation
 
@@ -42,6 +43,29 @@ Then restart your n8n instance.
    - Save the credentials
 
 ## Usage
+
+### Using as an AI Agent Tool
+
+This node can be used as a tool with n8n's AI Agent nodes, allowing AI agents to leverage GPT-5's advanced reasoning capabilities:
+
+1. **Enable Community Tools** (if needed):
+   - Set environment variable: `N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true`
+   
+2. **Connect to AI Agent**:
+   - Add an AI Agent node to your workflow
+   - Add this OpenAI GPT-5 node
+   - Connect the GPT-5 node to the AI Agent's tool input
+   
+3. **AI Tool Mode**:
+   - The node includes a special "AI Tool Mode" operation
+   - Simplified interface optimized for AI agent usage
+   - Automatically handles file processing if needed
+   
+4. **Example Use Cases**:
+   - Document analysis and summarization
+   - Complex reasoning tasks
+   - PDF content extraction and Q&A
+   - Multi-modal analysis (text + images)
 
 ### Basic PDF Processing
 
@@ -199,6 +223,13 @@ MIT - See [LICENSE](LICENSE) file for details
 **Jez** - [Jezweb](https://www.jezweb.com.au)
 
 ## Changelog
+
+### v0.4.0 (2025-01-10)
+- Added AI Agent Tool support with `usableAsTool` property
+- New "AI Tool Mode" operation for simplified AI agent usage
+- Added codex metadata for better tool discovery
+- Enhanced documentation for AI agent integration
+- Automatic file handling in AI Tool Mode
 
 ### v0.3.2 (2025-01-10)
 - Temperature parameter now excluded for GPT-5 models (not supported by reasoning models)

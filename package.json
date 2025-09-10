@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-openai-gpt5",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "n8n node for OpenAI GPT-5 with PDF processing via Responses API",
   "keywords": [
     "n8n-community-node-package",

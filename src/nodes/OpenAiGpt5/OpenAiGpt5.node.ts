@@ -22,6 +22,22 @@ export class OpenAiGpt5 implements INodeType {
 		},
 		inputs: ['main'] as any,
 		outputs: ['main'] as any,
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore - TypeScript doesn't recognize usableAsTool but it's needed for AI tool usage
+		usableAsTool: true,
+		codex: {
+			categories: ['AI'],
+			subcategories: {
+				AI: ['Document Processing', 'Reasoning', 'Analysis'],
+			},
+			resources: {
+				primaryDocumentation: [
+					{
+						url: 'https://github.com/jezweb/n8n-nodes-openai-gpt5',
+					},
+				],
+			},
+		},
 		credentials: [
 			{
 				name: 'openAiGpt5Api',
@@ -36,6 +52,12 @@ export class OpenAiGpt5 implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
+						name: 'AI Tool Mode',
+						value: 'aiToolMode',
+						description: 'Simplified mode for AI Agent usage - process text or files',
+						action: 'Process text or files in AI tool mode',
+					},
+					{
 						name: 'Upload & Process PDF',
 						value: 'uploadAndProcess',
 						description: 'Upload a PDF and process it with GPT-5',
@@ -49,6 +71,49 @@ export class OpenAiGpt5 implements INodeType {
 					},
 				],
 				default: 'uploadAndProcess',
+			},
+			// AI Tool Mode fields
+			{
+				displayName: 'Prompt',
+				name: 'aiToolPrompt',
+				type: 'string',
+				typeOptions: {
+					rows: 4,
+				},
+				default: '',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['aiToolMode'],
+					},
+				},
+				description: 'The prompt to send to GPT-5. Can reference files if provided.',
+			},
+			{
+				displayName: 'Include File',
+				name: 'aiToolIncludeFile',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: {
+						operation: ['aiToolMode'],
+					},
+				},
+				description: 'Whether to include a file (PDF, image, etc.) with the request',
+			},
+			{
+				displayName: 'File Binary Property',
+				name: 'aiToolBinaryProperty',
+				type: 'string',
+				default: 'data',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['aiToolMode'],
+						aiToolIncludeFile: [true],
+					},
+				},
+				description: 'Name of the binary property containing the file',
 			},
 			// Upload & Process operation fields
 			{
@@ -421,9 +486,60 @@ export class OpenAiGpt5 implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				let fileId: string;
-				const prompt = this.getNodeParameter('prompt', i) as string;
-				const simplifyOutput = this.getNodeParameter('simplifyOutput', i) as boolean;
-				const additionalOptions = this.getNodeParameter('additionalOptions', i) as IDataObject;
+				let prompt: string;
+				let simplifyOutput: boolean;
+				let additionalOptions: IDataObject;
+
+				// Handle AI Tool Mode
+				if (operation === 'aiToolMode') {
+					prompt = this.getNodeParameter('aiToolPrompt', i) as string;
+					simplifyOutput = true; // Always simplify for AI tool usage
+					additionalOptions = {
+						model: 'gpt-5',
+						reasoningEffort: 'medium',
+						verbosity: 'medium',
+					};
+
+					const includeFile = this.getNodeParameter('aiToolIncludeFile', i) as boolean;
+					if (includeFile) {
+						const binaryProperty = this.getNodeParameter('aiToolBinaryProperty', i) as string;
+						const binaryData = this.helpers.assertBinaryData(i, binaryProperty);
+						const fileBuffer = await this.helpers.getBinaryDataBuffer(i, binaryProperty);
+						const fileName = binaryData.fileName || 'document';
+						
+						// Upload file to OpenAI
+						// eslint-disable-next-line @typescript-eslint/no-var-requires
+						const FormData = require('form-data');
+						const formData = new FormData();
+						formData.append('file', fileBuffer, {
+							filename: fileName,
+							contentType: binaryData.mimeType || 'application/octet-stream',
+						});
+						formData.append('purpose', 'user_data');
+
+						const uploadOptions: IHttpRequestOptions = {
+							method: 'POST',
+							url: `${baseUrl}/v1/files`,
+							headers: {
+								'Authorization': `Bearer ${credentials.apiKey}`,
+								...formData.getHeaders(),
+							},
+							body: formData,
+						};
+
+						if (credentials.organizationId) {
+							uploadOptions.headers!['OpenAI-Organization'] = credentials.organizationId as string;
+						}
+
+						const uploadResponse = await this.helpers.httpRequest(uploadOptions);
+						fileId = uploadResponse.id;
+					}
+				} else {
+					// Original operation handling
+					prompt = this.getNodeParameter('prompt', i) as string;
+					simplifyOutput = this.getNodeParameter('simplifyOutput', i) as boolean;
+					additionalOptions = this.getNodeParameter('additionalOptions', i) as IDataObject;
+				}
 
 				// Step 1: Handle file upload if needed
 				if (operation === 'uploadAndProcess') {
@@ -503,7 +619,7 @@ export class OpenAiGpt5 implements INodeType {
 				};
 				
 				// Determine input structure based on whether we have files
-				if (operation === 'uploadAndProcess' || operation === 'processFileId') {
+				if (operation === 'uploadAndProcess' || operation === 'processFileId' || (operation === 'aiToolMode' && fileId)) {
 					// Use array structure for file inputs
 					requestBody.input = [
 						{
