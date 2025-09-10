@@ -38,14 +38,14 @@ export class OpenAiGpt5 implements INodeType {
 					{
 						name: 'Upload & Process PDF',
 						value: 'uploadAndProcess',
-						description: 'Upload a PDF file and process it with GPT-5 in one step',
-						action: 'Upload and process PDF with GPT-5',
+						description: 'Upload a PDF and process it with GPT-5',
+						action: 'Upload a PDF and process it with GPT-5',
 					},
 					{
 						name: 'Process with File ID',
 						value: 'processFileId',
-						description: 'Process an already uploaded file using its file ID',
-						action: 'Process file with GPT-5 using file ID',
+						description: 'Process a previously uploaded file using its ID',
+						action: 'Process a previously uploaded file using its ID',
 					},
 				],
 				default: 'uploadAndProcess',
@@ -375,7 +375,7 @@ export class OpenAiGpt5 implements INodeType {
 							numberPrecision: 1,
 						},
 						default: 0.7,
-						description: 'Controls randomness in the output',
+						description: 'Controls randomness (Not supported by GPT-5 reasoning models - will be ignored)',
 					},
 					{
 						displayName: 'Verbosity',
@@ -553,7 +553,9 @@ export class OpenAiGpt5 implements INodeType {
 				if (additionalOptions.maxTokens) {
 					requestBody.max_tokens = additionalOptions.maxTokens;
 				}
-				if (additionalOptions.temperature !== undefined) {
+				// Temperature is not supported by GPT-5 reasoning models
+				// Only add it for non-GPT-5 models
+				if (additionalOptions.temperature !== undefined && !String(model).startsWith('gpt-5')) {
 					requestBody.temperature = additionalOptions.temperature;
 				}
 				// Add reasoning and GPT-5 specific features

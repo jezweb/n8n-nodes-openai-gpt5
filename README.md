@@ -200,6 +200,11 @@ MIT - See [LICENSE](LICENSE) file for details
 
 ## Changelog
 
+### v0.3.2 (2025-01-10)
+- Temperature parameter now excluded for GPT-5 models (not supported by reasoning models)
+- Updated temperature description to clarify it's not supported by GPT-5
+- Reordered options alphabetically for better maintainability
+
 ### v0.3.1 (2025-01-10)
 - Fixed response extraction for simplified output
 - Improved input structure for text-only requests
