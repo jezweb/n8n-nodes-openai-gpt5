@@ -673,26 +673,53 @@ export class OpenAiGpt5 implements INodeType {
 					
 					// Check if it's an array or string
 					if (Array.isArray(bulkInput)) {
-						bulkFiles = bulkInput as string[];
+						// Direct array input
+						bulkFiles = bulkInput.map(item => typeof item === 'string' ? item : String(item));
 					} else if (typeof bulkInput === 'string') {
-						// Split by comma and trim whitespace
-						bulkFiles = (bulkInput as string).split(',').map(f => f.trim()).filter(f => f);
+						// Try to parse as JSON array first (in case it's a stringified array)
+						try {
+							const parsed = JSON.parse(bulkInput as string);
+							if (Array.isArray(parsed)) {
+								bulkFiles = parsed.map(item => typeof item === 'string' ? item : String(item));
+							} else {
+								// Not an array, treat as comma-separated
+								bulkFiles = (bulkInput as string).split(',').map(f => f.trim()).filter(f => f);
+							}
+						} catch {
+							// Not valid JSON, treat as comma-separated
+							bulkFiles = (bulkInput as string).split(',').map(f => f.trim()).filter(f => f);
+						}
+					} else if (typeof bulkInput === 'object' && bulkInput !== null) {
+						// Handle object with array property (common in n8n)
+						if ('body' in bulkInput && Array.isArray(bulkInput.body)) {
+							bulkFiles = bulkInput.body.map(item => typeof item === 'string' ? item : String(item));
+						}
 					}
 					
 					// Process each bulk file
 					for (const fileRef of bulkFiles) {
-						if (fileRef.startsWith('file_')) {
+						if (!fileRef) continue; // Skip empty entries
+						
+						const fileRefStr = String(fileRef).trim();
+						if (fileRefStr.startsWith('file_')) {
 							// It's a file ID
 							additionalFileContents.push({
 								type: 'input_file',
-								file_id: fileRef,
+								file_id: fileRefStr,
 							});
-						} else if (fileRef.startsWith('http://') || fileRef.startsWith('https://')) {
-							// It's a URL
+						} else if (fileRefStr.includes('http://') || fileRefStr.includes('https://')) {
+							// It's a URL - use includes to catch URLs that might have extra characters
+							// Extract the URL if it's wrapped in something
+							let url = fileRefStr;
+							// Try to extract URL from common patterns
+							const urlMatch = fileRefStr.match(/(https?:\/\/[^\s\]}"']+)/);
+							if (urlMatch) {
+								url = urlMatch[1];
+							}
 							additionalFileContents.push({
 								type: 'input_image',
 								image: {
-									url: fileRef,
+									url: url,
 								},
 							});
 						}
