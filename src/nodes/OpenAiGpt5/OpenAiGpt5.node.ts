@@ -308,7 +308,7 @@ export class OpenAiGpt5 implements INodeType {
 								description: 'Comma-separated URLs or file IDs',
 							},
 							{
-								name: 'Array from Previous Node',
+								name: 'Array From Previous Node',
 								value: 'array',
 								description: 'Array of URLs from a previous node',
 							},
