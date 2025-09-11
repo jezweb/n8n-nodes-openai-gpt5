@@ -305,6 +305,21 @@ export class OpenAiGpt5 implements INodeType {
 						description: 'Additional files (PDFs, images, etc.) to include in the request',
 					},
 					{
+						displayName: 'Bulk File Input',
+						name: 'bulkFileInput',
+						type: 'string',
+						default: '',
+						placeholder: 'file1.jpg, file2.jpg OR {{ $json.imageUrls }}',
+						description: 'Comma-separated URLs/File IDs or expression returning array. Supports both URLs and file IDs.',
+					},
+					{
+						displayName: 'Process All Binary Items',
+						name: 'processAllBinaryItems',
+						type: 'boolean',
+						default: false,
+						description: 'Automatically process all binary data from input items as additional files',
+					},
+					{
 						displayName: 'Max Tokens',
 						name: 'maxTokens',
 						type: 'number',
@@ -642,19 +657,20 @@ export class OpenAiGpt5 implements INodeType {
 				}
 
 				// Add additional files if provided
+				const additionalFileContents: IDataObject[] = [];
+				
+				// Process traditional additional files
 				if (additionalOptions.additionalFiles) {
 					const files = (additionalOptions.additionalFiles as IDataObject).files as IDataObject[];
 					if (files && files.length > 0) {
 						for (const file of files) {
-							const inputArray = requestBody.input as IDataObject[];
-							const content = inputArray[0].content as IDataObject[];
 							if (file.fileSource === 'fileId') {
-								content.push({
+								additionalFileContents.push({
 									type: 'input_file',
 									file_id: file.fileId,
 								});
 							} else if (file.fileSource === 'url') {
-								content.push({
+								additionalFileContents.push({
 									type: 'input_image',
 									image: {
 										url: file.url,
@@ -663,6 +679,97 @@ export class OpenAiGpt5 implements INodeType {
 							}
 						}
 					}
+				}
+				
+				// Process bulk file input (comma-separated or array)
+				if (additionalOptions.bulkFileInput) {
+					let bulkFiles: string[] = [];
+					const bulkInput = additionalOptions.bulkFileInput;
+					
+					// Check if it's an array or string
+					if (Array.isArray(bulkInput)) {
+						bulkFiles = bulkInput as string[];
+					} else if (typeof bulkInput === 'string') {
+						// Split by comma and trim whitespace
+						bulkFiles = (bulkInput as string).split(',').map(f => f.trim()).filter(f => f);
+					}
+					
+					// Process each bulk file
+					for (const fileRef of bulkFiles) {
+						if (fileRef.startsWith('file_')) {
+							// It's a file ID
+							additionalFileContents.push({
+								type: 'input_file',
+								file_id: fileRef,
+							});
+						} else if (fileRef.startsWith('http://') || fileRef.startsWith('https://')) {
+							// It's a URL
+							additionalFileContents.push({
+								type: 'input_image',
+								image: {
+									url: fileRef,
+								},
+							});
+						}
+					}
+				}
+				
+				// Process all binary items if enabled
+				if (additionalOptions.processAllBinaryItems) {
+					// Upload each binary item and add to content
+					for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+						const item = items[itemIndex];
+						if (item.binary) {
+							// Process each binary property in the item
+							for (const binaryPropertyName of Object.keys(item.binary)) {
+								try {
+									const binaryData = this.helpers.assertBinaryData(itemIndex, binaryPropertyName);
+									const fileBuffer = await this.helpers.getBinaryDataBuffer(itemIndex, binaryPropertyName);
+									const fileName = binaryData.fileName || `file_${itemIndex}_${binaryPropertyName}`;
+									
+									// Upload file to OpenAI
+									// eslint-disable-next-line @typescript-eslint/no-var-requires
+									const FormData = require('form-data');
+									const formData = new FormData();
+									formData.append('file', fileBuffer, {
+										filename: fileName,
+										contentType: binaryData.mimeType || 'application/octet-stream',
+									});
+									formData.append('purpose', additionalOptions.purpose || 'user_data');
+									
+									const uploadOptions: IHttpRequestOptions = {
+										method: 'POST',
+										url: `${baseUrl}/v1/files`,
+										headers: {
+											'Authorization': `Bearer ${credentials.apiKey}`,
+											...formData.getHeaders(),
+										},
+										body: formData,
+									};
+									
+									if (credentials.organizationId) {
+										uploadOptions.headers!['OpenAI-Organization'] = credentials.organizationId as string;
+									}
+									
+									const uploadResponse = await this.helpers.httpRequest(uploadOptions);
+									additionalFileContents.push({
+										type: 'input_file',
+										file_id: uploadResponse.id,
+									});
+								} catch (error) {
+									// Continue processing other files if one fails
+									console.error(`Failed to process binary item ${itemIndex}.${binaryPropertyName}:`, error);
+								}
+							}
+						}
+					}
+				}
+				
+				// Add all additional file contents to the request
+				if (additionalFileContents.length > 0 && requestBody.input && Array.isArray(requestBody.input)) {
+					const inputArray = requestBody.input as IDataObject[];
+					const content = inputArray[0].content as IDataObject[];
+					content.push(...additionalFileContents);
 				}
 
 				// Add optional parameters
