@@ -337,15 +337,15 @@ export class OpenAiGpt5 implements INodeType {
 					{
 						displayName: 'File Array',
 						name: 'bulkFileArray',
-						type: 'json',
-						default: '[]',
+						type: 'string',
+						default: '',
 						displayOptions: {
 							show: {
 								bulkFileSource: ['array'],
 							},
 						},
-						placeholder: '{{ $json.imageUrls }}',
-						description: 'Expression that returns an array of URLs or file IDs',
+						placeholder: "{{ $('PDF to PNG').item.json.body }}",
+						description: 'Expression that returns an array of URLs or file IDs. Drag data from previous nodes or use expressions.',
 					},
 					{
 						displayName: 'JSON Array String',
@@ -774,7 +774,20 @@ export class OpenAiGpt5 implements INodeType {
 								
 							case 'array':
 								const fileArray = additionalOptions.bulkFileArray;
-								if (Array.isArray(fileArray)) {
+								if (typeof fileArray === 'string') {
+									// Try to parse the string as JSON
+									try {
+										const parsed = JSON.parse(fileArray);
+										if (Array.isArray(parsed)) {
+											bulkFiles = parsed.map(item => typeof item === 'string' ? item : String(item));
+										}
+									} catch {
+										// Not valid JSON, might be a single URL
+										if (fileArray.trim()) {
+											bulkFiles = [fileArray.trim()];
+										}
+									}
+								} else if (Array.isArray(fileArray)) {
 									bulkFiles = fileArray.map(item => typeof item === 'string' ? item : String(item));
 								} else if (fileArray && typeof fileArray === 'object' && 'body' in fileArray && Array.isArray(fileArray.body)) {
 									// Handle n8n expression results
