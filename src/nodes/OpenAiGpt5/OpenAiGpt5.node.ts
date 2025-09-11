@@ -222,18 +222,6 @@ export class OpenAiGpt5 implements INodeType {
 				description: 'The prompt to send to GPT-5 for processing the file',
 			},
 			{
-				displayName: 'Simplify Output',
-				name: 'simplifyOutput',
-				type: 'boolean',
-				default: true,
-				description: 'Whether to return a simplified version of the response instead of the raw data',
-				displayOptions: {
-					show: {
-						operation: ['uploadAndProcess', 'processFileId'],
-					},
-				},
-			},
-			{
 				displayName: 'Additional Options',
 				name: 'additionalOptions',
 				type: 'collection',
@@ -502,13 +490,11 @@ export class OpenAiGpt5 implements INodeType {
 			try {
 				let fileId: string;
 				let prompt: string;
-				let simplifyOutput: boolean;
 				let additionalOptions: IDataObject;
 
 				// Handle AI Tool Mode
 				if (operation === 'aiToolMode') {
 					prompt = this.getNodeParameter('aiToolPrompt', i) as string;
-					simplifyOutput = true; // Always simplify for AI tool usage
 					additionalOptions = {
 						model: 'gpt-5',
 						reasoningEffort: 'medium',
@@ -552,7 +538,6 @@ export class OpenAiGpt5 implements INodeType {
 				} else {
 					// Original operation handling
 					prompt = this.getNodeParameter('prompt', i) as string;
-					simplifyOutput = this.getNodeParameter('simplifyOutput', i) as boolean;
 					additionalOptions = this.getNodeParameter('additionalOptions', i) as IDataObject;
 				}
 
@@ -840,10 +825,11 @@ export class OpenAiGpt5 implements INodeType {
 
 				const response = await this.helpers.httpRequest(responseOptions);
 
-				// Format the response based on simplifyOutput setting
+				// Format the response
 				let outputData: any;
 				
-				if (simplifyOutput) {
+				// For AI Tool Mode, simplify the output
+				if (operation === 'aiToolMode') {
 					// Extract just the essential content from the response structure
 					// GPT-5 responses have structure: output[0].content[0].text
 					let textContent = '';
@@ -865,7 +851,7 @@ export class OpenAiGpt5 implements INodeType {
 						usage: response.usage,
 					};
 				} else {
-					// Return full response with metadata
+					// Return full response with all metadata for regular operations
 					outputData = {
 						...response,
 						fileId: fileId,
