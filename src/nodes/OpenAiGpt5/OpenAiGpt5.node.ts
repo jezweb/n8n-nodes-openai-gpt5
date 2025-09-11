@@ -293,12 +293,84 @@ export class OpenAiGpt5 implements INodeType {
 						description: 'Additional files (PDFs, images, etc.) to include in the request',
 					},
 					{
-						displayName: 'Bulk File Input',
+						displayName: 'Bulk File Source',
+						name: 'bulkFileSource',
+						type: 'options',
+						options: [
+							{
+								name: 'None',
+								value: 'none',
+								description: 'No bulk files',
+							},
+							{
+								name: 'Comma-Separated List',
+								value: 'commaSeparated',
+								description: 'Comma-separated URLs or file IDs',
+							},
+							{
+								name: 'Array from Previous Node',
+								value: 'array',
+								description: 'Array of URLs from a previous node',
+							},
+							{
+								name: 'JSON Array String',
+								value: 'jsonArray',
+								description: 'JSON formatted array string',
+							},
+						],
+						default: 'none',
+						description: 'How to provide multiple files',
+					},
+					{
+						displayName: 'File List',
+						name: 'bulkFileList',
+						type: 'string',
+						default: '',
+						displayOptions: {
+							show: {
+								bulkFileSource: ['commaSeparated'],
+							},
+						},
+						placeholder: 'url1.jpg, url2.jpg, file_id1, file_id2',
+						description: 'Comma-separated list of URLs or file IDs',
+					},
+					{
+						displayName: 'File Array',
+						name: 'bulkFileArray',
+						type: 'json',
+						default: '[]',
+						displayOptions: {
+							show: {
+								bulkFileSource: ['array'],
+							},
+						},
+						placeholder: '{{ $json.imageUrls }}',
+						description: 'Expression that returns an array of URLs or file IDs',
+					},
+					{
+						displayName: 'JSON Array String',
+						name: 'bulkFileJsonString',
+						type: 'string',
+						default: '',
+						displayOptions: {
+							show: {
+								bulkFileSource: ['jsonArray'],
+							},
+						},
+						placeholder: '["url1.jpg", "url2.jpg"]',
+						description: 'JSON array string of URLs or file IDs',
+					},
+					{
+						displayName: 'Bulk File Input (Deprecated)',
 						name: 'bulkFileInput',
 						type: 'string',
 						default: '',
-						placeholder: 'file1.jpg, file2.jpg OR {{ $json.imageUrls }}',
-						description: 'Comma-separated URLs/File IDs or expression returning array. Supports both URLs and file IDs.',
+						displayOptions: {
+							show: {
+								'/': [false], // Never show this field
+							},
+						},
+						description: 'Legacy field for backward compatibility',
 					},
 					{
 						displayName: 'Process All Binary Items',
@@ -666,33 +738,64 @@ export class OpenAiGpt5 implements INodeType {
 					}
 				}
 				
-				// Process bulk file input (comma-separated or array)
-				if (additionalOptions.bulkFileInput) {
-					let bulkFiles: string[] = [];
-					const bulkInput = additionalOptions.bulkFileInput;
-					
-					// Check if it's an array or string
-					if (Array.isArray(bulkInput)) {
-						// Direct array input
-						bulkFiles = bulkInput.map(item => typeof item === 'string' ? item : String(item));
-					} else if (typeof bulkInput === 'string') {
-						// Try to parse as JSON array first (in case it's a stringified array)
-						try {
-							const parsed = JSON.parse(bulkInput as string);
-							if (Array.isArray(parsed)) {
-								bulkFiles = parsed.map(item => typeof item === 'string' ? item : String(item));
-							} else {
-								// Not an array, treat as comma-separated
+				// Process bulk file input based on source type
+				const bulkFileSource = additionalOptions.bulkFileSource as string;
+				let bulkFiles: string[] = [];
+				
+				try {
+					// Check for legacy bulkFileInput first (backward compatibility)
+					if (!bulkFileSource && additionalOptions.bulkFileInput) {
+						// Legacy mode - try to auto-detect format
+						const bulkInput = additionalOptions.bulkFileInput;
+						
+						if (Array.isArray(bulkInput)) {
+							bulkFiles = bulkInput.map(item => typeof item === 'string' ? item : String(item));
+						} else if (typeof bulkInput === 'string') {
+							try {
+								const parsed = JSON.parse(bulkInput as string);
+								if (Array.isArray(parsed)) {
+									bulkFiles = parsed.map(item => typeof item === 'string' ? item : String(item));
+								} else {
+									bulkFiles = (bulkInput as string).split(',').map(f => f.trim()).filter(f => f);
+								}
+							} catch {
 								bulkFiles = (bulkInput as string).split(',').map(f => f.trim()).filter(f => f);
 							}
-						} catch {
-							// Not valid JSON, treat as comma-separated
-							bulkFiles = (bulkInput as string).split(',').map(f => f.trim()).filter(f => f);
 						}
-					} else if (typeof bulkInput === 'object' && bulkInput !== null) {
-						// Handle object with array property (common in n8n)
-						if ('body' in bulkInput && Array.isArray(bulkInput.body)) {
-							bulkFiles = bulkInput.body.map(item => typeof item === 'string' ? item : String(item));
+					} else if (bulkFileSource && bulkFileSource !== 'none') {
+						// New structured input mode
+						switch (bulkFileSource) {
+							case 'commaSeparated':
+								const fileList = additionalOptions.bulkFileList as string;
+								if (fileList) {
+									bulkFiles = fileList.split(',').map(f => f.trim()).filter(f => f);
+								}
+								break;
+								
+							case 'array':
+								const fileArray = additionalOptions.bulkFileArray;
+								if (Array.isArray(fileArray)) {
+									bulkFiles = fileArray.map(item => typeof item === 'string' ? item : String(item));
+								} else if (fileArray && typeof fileArray === 'object' && 'body' in fileArray && Array.isArray(fileArray.body)) {
+									// Handle n8n expression results
+									bulkFiles = fileArray.body.map(item => typeof item === 'string' ? item : String(item));
+								}
+								break;
+								
+							case 'jsonArray':
+								const jsonString = additionalOptions.bulkFileJsonString as string;
+								if (jsonString) {
+									try {
+										const parsed = JSON.parse(jsonString);
+										if (Array.isArray(parsed)) {
+											bulkFiles = parsed.map(item => typeof item === 'string' ? item : String(item));
+										}
+									} catch (error) {
+										console.error('Failed to parse JSON array:', error);
+										// Continue without throwing to avoid breaking the workflow
+									}
+								}
+								break;
 						}
 					}
 					
@@ -709,7 +812,6 @@ export class OpenAiGpt5 implements INodeType {
 							});
 						} else if (fileRefStr.includes('http://') || fileRefStr.includes('https://')) {
 							// It's a URL - use includes to catch URLs that might have extra characters
-							// Extract the URL if it's wrapped in something
 							let url = fileRefStr;
 							// Try to extract URL from common patterns
 							const urlMatch = fileRefStr.match(/(https?:\/\/[^\s\]}"']+)/);
@@ -724,6 +826,9 @@ export class OpenAiGpt5 implements INodeType {
 							});
 						}
 					}
+				} catch (error) {
+					// Log error but continue processing
+					console.error('Error processing bulk files:', error);
 				}
 				
 				// Process all binary items if enabled
