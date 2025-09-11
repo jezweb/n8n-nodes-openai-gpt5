@@ -317,7 +317,7 @@ export class OpenAiGpt5 implements INodeType {
 						name: 'processAllBinaryItems',
 						type: 'boolean',
 						default: false,
-						description: 'Automatically process all binary data from input items as additional files',
+						description: 'Whether to automatically process all binary data from input items as additional files',
 					},
 					{
 						displayName: 'Max Tokens',
