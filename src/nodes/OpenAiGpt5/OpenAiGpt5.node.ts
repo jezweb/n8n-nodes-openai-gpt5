@@ -683,7 +683,7 @@ export class OpenAiGpt5 implements INodeType {
 				}
 				
 				// Process bulk file inputs - check all three fields
-				let bulkFiles: string[] = [];
+				const bulkFiles: string[] = [];
 				
 				try {
 					// 1. Check comma-separated list
