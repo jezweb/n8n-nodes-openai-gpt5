@@ -5,7 +5,6 @@ import {
 	IDataObject,
 	INodeExecutionData,
 	NodeOperationError,
-	IHttpRequestOptions,
 } from 'n8n-workflow';
 
 export class OpenAiGpt5 implements INodeType {
@@ -15,29 +14,13 @@ export class OpenAiGpt5 implements INodeType {
 		icon: 'file:openai.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"]}}',
-		description: 'Process PDFs and other files with OpenAI GPT-5 using the Responses API',
+		subtitle: 'Process files with GPT-5',
+		description: 'Process PDFs and images with OpenAI GPT-5',
 		defaults: {
 			name: 'OpenAI GPT-5',
 		},
 		inputs: ['main'] as any,
 		outputs: ['main'] as any,
-		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-ignore - TypeScript doesn't recognize usableAsTool but it's needed for AI tool usage
-		usableAsTool: true,
-		codex: {
-			categories: ['AI'],
-			subcategories: {
-				AI: ['Document Processing', 'Reasoning', 'Analysis'],
-			},
-			resources: {
-				primaryDocumentation: [
-					{
-						url: 'https://github.com/jezweb/n8n-nodes-openai-gpt5',
-					},
-				],
-			},
-		},
 		credentials: [
 			{
 				name: 'openAiGpt5Api',
@@ -46,290 +29,39 @@ export class OpenAiGpt5 implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				options: [
-					{
-						name: 'AI Tool Mode',
-						value: 'aiToolMode',
-						description: 'Simplified mode for AI Agent usage - process text or files',
-						action: 'Process text or files in AI tool mode',
-					},
-					{
-						name: 'Upload & Process PDF',
-						value: 'uploadAndProcess',
-						description: 'Upload a PDF and process it with GPT-5',
-						action: 'Upload a PDF and process it with GPT-5',
-					},
-					{
-						name: 'Process with File ID',
-						value: 'processFileId',
-						description: 'Process a previously uploaded file using its ID',
-						action: 'Process a previously uploaded file using its ID',
-					},
-				],
-				default: 'uploadAndProcess',
-			},
-			// AI Tool Mode fields
-			{
-				displayName: 'Prompt',
-				name: 'aiToolPrompt',
-				type: 'string',
-				typeOptions: {
-					rows: 4,
-				},
-				default: '',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['aiToolMode'],
-					},
-				},
-				description: 'The prompt to send to GPT-5. Can reference files if provided.',
-			},
-			{
-				displayName: 'Include File',
-				name: 'aiToolIncludeFile',
-				type: 'boolean',
-				default: false,
-				displayOptions: {
-					show: {
-						operation: ['aiToolMode'],
-					},
-				},
-				description: 'Whether to include a file (PDF, image, etc.) with the request',
-			},
-			{
-				displayName: 'File Binary Property',
-				name: 'aiToolBinaryProperty',
-				type: 'string',
-				default: 'data',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['aiToolMode'],
-						aiToolIncludeFile: [true],
-					},
-				},
-				description: 'Name of the binary property containing the file',
-			},
-			// Upload & Process operation fields
-			{
-				displayName: 'Input Type',
-				name: 'inputType',
-				type: 'options',
-				displayOptions: {
-					show: {
-						operation: ['uploadAndProcess'],
-					},
-				},
-				options: [
-					{
-						name: 'Binary Data',
-						value: 'binary',
-						description: 'Use binary data from previous node (e.g., from S3 or Read Binary File)',
-					},
-					{
-						name: 'File URL',
-						value: 'url',
-						description: 'Download file from URL (Google Drive, S3 signed URL, etc.)',
-					},
-					{
-						name: 'File Path',
-						value: 'filePath',
-						description: 'Specify a file path on the server',
-					},
-				],
-				default: 'binary',
-			},
-			{
-				displayName: 'Binary Property',
-				name: 'binaryProperty',
-				type: 'string',
-				default: 'data',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['uploadAndProcess'],
-						inputType: ['binary'],
-					},
-				},
-				description: 'Name of the binary property containing the PDF file',
-			},
-			{
-				displayName: 'File URL',
-				name: 'fileUrl',
-				type: 'string',
-				default: '',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['uploadAndProcess'],
-						inputType: ['url'],
-					},
-				},
-				placeholder: 'https://example.com/file.pdf',
-				description: 'URL to download the file from (supports direct download links, signed URLs, etc.)',
-			},
-			{
-				displayName: 'File Path',
-				name: 'filePath',
-				type: 'string',
-				default: '',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['uploadAndProcess'],
-						inputType: ['filePath'],
-					},
-				},
-				placeholder: '/path/to/file.pdf',
-				description: 'Path to the PDF file on the server',
-			},
-			// Process with File ID fields
-			{
-				displayName: 'File ID',
-				name: 'fileId',
-				type: 'string',
-				default: '',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['processFileId'],
-					},
-				},
-				placeholder: 'file_abc123...',
-				// eslint-disable-next-line n8n-nodes-base/node-param-description-miscased-id, n8n-nodes-base/node-param-description-miscased-json
-				description: 'The file ID returned from a previous upload (e.g., {{ $json.id }})',
-			},
-			// Common fields for both operations
-			{
 				displayName: 'Prompt',
 				name: 'prompt',
 				type: 'string',
 				typeOptions: {
 					rows: 4,
 				},
-				default: 'Analyze this document and provide a summary.',
+				default: 'Analyze these files and provide insights.',
 				required: true,
-				displayOptions: {
-					show: {
-						operation: ['uploadAndProcess', 'processFileId'],
-					},
-				},
-				description: 'The prompt to send to GPT-5 for processing the file',
+				description: 'What you want GPT-5 to do with the files',
 			},
 			{
-				displayName: 'Additional Options',
-				name: 'additionalOptions',
+				displayName: 'PDF Files',
+				name: 'pdfFiles',
+				type: 'string',
+				default: '',
+				placeholder: 'file_abc123 or ["file_1", "file_2"] or {{ $json.pdfIds }}',
+				description: 'PDF file IDs (upload PDFs first to get IDs). Single ID, array, or expression.',
+			},
+			{
+				displayName: 'Images',
+				name: 'imageFiles',
+				type: 'string',
+				default: '',
+				placeholder: 'https://url.jpg or ["url1", "url2"] or {{ $json.images }}',
+				description: 'Image URLs or file IDs. Single value, array, or expression.',
+			},
+			{
+				displayName: 'Options',
+				name: 'options',
 				type: 'collection',
 				placeholder: 'Add Option',
 				default: {},
-				displayOptions: {
-					show: {
-						operation: ['uploadAndProcess', 'processFileId'],
-					},
-				},
-				// eslint-disable-next-line n8n-nodes-base/node-param-collection-type-unsorted-items
 				options: [
-					{
-						displayName: 'Additional Files',
-						name: 'additionalFiles',
-						type: 'fixedCollection',
-						typeOptions: {
-							multipleValues: true,
-						},
-						default: {},
-						options: [
-							{
-								name: 'files',
-								displayName: 'Files',
-								values: [
-									{
-										displayName: 'File Source',
-										name: 'fileSource',
-										type: 'options',
-										options: [
-											{
-												name: 'File ID',
-												value: 'fileId',
-											},
-											{
-												name: 'URL',
-												value: 'url',
-											},
-										],
-										default: 'url',
-									},
-									{
-										displayName: 'File ID',
-										name: 'fileId',
-										type: 'string',
-										displayOptions: {
-											show: {
-												fileSource: ['fileId'],
-											},
-										},
-										default: '',
-										placeholder: 'file_img_...',
-									},
-									{
-										displayName: 'File URL',
-										name: 'url',
-										type: 'string',
-										displayOptions: {
-											show: {
-												fileSource: ['url'],
-											},
-										},
-										default: '',
-										placeholder: 'https://example.com/file.pdf',
-									},
-								],
-							},
-						],
-						description: 'Additional files (PDFs, images, etc.) to include in the request',
-					},
-					{
-						displayName: 'Bulk File List (Comma-Separated)',
-						name: 'bulkFileList',
-						type: 'string',
-						default: '',
-						placeholder: 'url1.jpg, url2.jpg, file_id1, file_id2',
-						description: 'Comma-separated list of URLs or file IDs. Leave empty if not using.',
-					},
-					{
-						displayName: 'Bulk File Array (Expression)',
-						name: 'bulkFileArray',
-						type: 'string',
-						default: '',
-						placeholder: "{{ $('PDF to PNG').item.json.body }}",
-						description: 'Expression that returns an array of URLs or file IDs. Use this for data from previous nodes.',
-					},
-					{
-						displayName: 'Bulk File JSON String',
-						name: 'bulkFileJsonString',
-						type: 'string',
-						default: '',
-						placeholder: '["url1.jpg", "url2.jpg"]',
-						description: 'JSON array string of URLs or file IDs. Useful for hardcoded arrays.',
-					},
-					{
-						displayName: 'Process All Binary Items',
-						name: 'processAllBinaryItems',
-						type: 'boolean',
-						default: false,
-						description: 'Whether to automatically process all binary data from input items as additional files',
-					},
-					{
-						displayName: 'Max Tokens',
-						name: 'maxTokens',
-						type: 'number',
-						default: 4096,
-						description: 'Maximum number of tokens to generate',
-					},
 					{
 						displayName: 'Model',
 						name: 'model',
@@ -338,7 +70,17 @@ export class OpenAiGpt5 implements INodeType {
 							{
 								name: 'GPT-4.1',
 								value: 'gpt-4.1',
-								description: 'GPT-4.1 model',
+								description: 'Latest GPT-4.1 with 1M context',
+							},
+							{
+								name: 'GPT-4.1 Mini',
+								value: 'gpt-4.1-mini',
+								description: 'Faster GPT-4.1 variant',
+							},
+							{
+								name: 'GPT-4.1 Nano',
+								value: 'gpt-4.1-nano',
+								description: 'Fastest, cheapest model',
 							},
 							{
 								name: 'GPT-5',
@@ -353,7 +95,7 @@ export class OpenAiGpt5 implements INodeType {
 							{
 								name: 'GPT-5 Nano',
 								value: 'gpt-5-nano',
-								description: 'Smallest, fastest GPT-5 variant',
+								description: 'Fastest, most efficient GPT-5',
 							},
 							{
 								name: 'O3',
@@ -363,28 +105,18 @@ export class OpenAiGpt5 implements INodeType {
 							{
 								name: 'O3 Mini',
 								value: 'o3-mini',
-								description: 'Smaller, faster O3 variant',
-							},
-							{
-								name: 'O3 Pro',
-								value: 'o3-pro',
-								description: 'Enhanced O3 with better reasoning',
-							},
-							{
-								name: 'O4 Mini',
-								value: 'o4-mini',
-								description: 'Latest mini reasoning model',
+								description: 'Smaller O3 variant',
 							},
 						],
 						default: 'gpt-5',
 						description: 'The OpenAI model to use',
 					},
 					{
-						displayName: 'Purpose',
-						name: 'purpose',
-						type: 'string',
-						default: 'user_data',
-						description: 'Purpose for file upload (required by OpenAI)',
+						displayName: 'Max Tokens',
+						name: 'maxTokens',
+						type: 'number',
+						default: 4096,
+						description: 'Maximum number of tokens to generate',
 					},
 					{
 						displayName: 'Reasoning Effort',
@@ -394,31 +126,21 @@ export class OpenAiGpt5 implements INodeType {
 							{
 								name: 'Low',
 								value: 'low',
-								description: 'Lower reasoning effort for faster responses',
+								description: 'Faster responses',
 							},
 							{
 								name: 'Medium',
 								value: 'medium',
-								description: 'Balanced reasoning and speed (default)',
+								description: 'Balanced (default)',
 							},
 							{
 								name: 'High',
 								value: 'high',
-								description: 'Maximum reasoning capability',
-							},
-							{
-								name: 'Minimal',
-								value: 'minimal',
-								description: 'Minimal reasoning tokens for fastest responses (GPT-5 only)',
+								description: 'Maximum reasoning',
 							},
 						],
 						default: 'medium',
-						description: 'Reasoning effort level for enhanced model reasoning',
-						displayOptions: {
-							show: {
-								model: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'o3', 'o3-pro', 'o3-mini', 'o4-mini'],
-							},
-						},
+						description: 'Reasoning effort level',
 					},
 					{
 						displayName: 'Reasoning Summary',
@@ -433,62 +155,21 @@ export class OpenAiGpt5 implements INodeType {
 							{
 								name: 'Auto',
 								value: 'auto',
-								description: 'Automatic summary generation',
+								description: 'Let model decide',
+							},
+							{
+								name: 'Concise',
+								value: 'concise',
+								description: 'Brief reasoning summary',
 							},
 							{
 								name: 'Detailed',
 								value: 'detailed',
-								description: 'Detailed reasoning summary',
+								description: 'Full reasoning details',
 							},
 						],
 						default: 'none',
-						description: 'Request summaries of model reasoning (not guaranteed for every request)',
-						displayOptions: {
-							show: {
-								model: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'o3', 'o3-pro', 'o3-mini'],
-							},
-						},
-					},
-					{
-						displayName: 'Temperature',
-						name: 'temperature',
-						type: 'number',
-						typeOptions: {
-							minValue: 0,
-							maxValue: 2,
-							numberPrecision: 1,
-						},
-						default: 0.7,
-						description: 'Controls randomness (Not supported by GPT-5 reasoning models - will be ignored)',
-					},
-					{
-						displayName: 'Verbosity',
-						name: 'verbosity',
-						type: 'options',
-						options: [
-							{
-								name: 'Low',
-								value: 'low',
-								description: 'Most concise output',
-							},
-							{
-								name: 'Medium',
-								value: 'medium',
-								description: 'Balanced verbosity',
-							},
-							{
-								name: 'High',
-								value: 'high',
-								description: 'More detailed output',
-							},
-						],
-						default: 'medium',
-						description: 'Control how concise the model output will be (GPT-5 only)',
-						displayOptions: {
-							show: {
-								model: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'],
-							},
-						},
+						description: 'Include reasoning summary in response',
 					},
 				],
 			},
@@ -500,423 +181,215 @@ export class OpenAiGpt5 implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 		const credentials = await this.getCredentials('openAiGpt5Api');
 		const baseUrl = (credentials.baseUrl as string) || 'https://api.openai.com';
-		const operation = this.getNodeParameter('operation', 0) as string;
+
+		// Helper function to parse file inputs
+		const parseFileInput = (input: any): string[] => {
+			if (!input) return [];
+			
+			// Already an array
+			if (Array.isArray(input)) {
+				return input.map(item => String(item).trim()).filter(item => item);
+			}
+			
+			// String input
+			if (typeof input === 'string') {
+				const trimmed = input.trim();
+				if (!trimmed) return [];
+				
+				// Check if it's a JSON array string
+				if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+					try {
+						const parsed = JSON.parse(trimmed);
+						if (Array.isArray(parsed)) {
+							return parsed.map(item => String(item).trim()).filter(item => item);
+						}
+					} catch (e) {
+						// Not valid JSON, treat as string
+					}
+				}
+				
+				// Check if it's comma-separated
+				if (trimmed.includes(',')) {
+					return trimmed.split(',').map(s => s.trim()).filter(s => s);
+				}
+				// Single item
+				return [trimmed];
+			}
+			
+			// Other types - try to convert to string
+			const str = String(input).trim();
+			return str ? [str] : [];
+		};
 
 		for (let i = 0; i < items.length; i++) {
 			try {
-				let fileId: string;
-				let prompt: string;
-				let additionalOptions: IDataObject;
+				const prompt = this.getNodeParameter('prompt', i) as string;
+				const pdfFiles = this.getNodeParameter('pdfFiles', i, '') as any;
+				const imageFiles = this.getNodeParameter('imageFiles', i, '') as any;
+				const options = this.getNodeParameter('options', i, {}) as IDataObject;
 
-				// Handle AI Tool Mode
-				if (operation === 'aiToolMode') {
-					prompt = this.getNodeParameter('aiToolPrompt', i) as string;
-					additionalOptions = {
-						model: 'gpt-5',
-						reasoningEffort: 'medium',
-						verbosity: 'medium',
-					};
+				const model = options.model || 'gpt-5';
 
-					const includeFile = this.getNodeParameter('aiToolIncludeFile', i) as boolean;
-					if (includeFile) {
-						const binaryProperty = this.getNodeParameter('aiToolBinaryProperty', i) as string;
-						const binaryData = this.helpers.assertBinaryData(i, binaryProperty);
-						const fileBuffer = await this.helpers.getBinaryDataBuffer(i, binaryProperty);
-						const fileName = binaryData.fileName || 'document';
-						
-						// Upload file to OpenAI
-						// eslint-disable-next-line @typescript-eslint/no-var-requires
-						const FormData = require('form-data');
-						const formData = new FormData();
-						formData.append('file', fileBuffer, {
-							filename: fileName,
-							contentType: binaryData.mimeType || 'application/octet-stream',
-						});
-						formData.append('purpose', 'user_data');
-
-						const uploadOptions: IHttpRequestOptions = {
-							method: 'POST',
-							url: `${baseUrl}/v1/files`,
-							headers: {
-								'Authorization': `Bearer ${credentials.apiKey}`,
-								...formData.getHeaders(),
-							},
-							body: formData,
-						};
-
-						if (credentials.organizationId) {
-							uploadOptions.headers!['OpenAI-Organization'] = credentials.organizationId as string;
-						}
-
-						const uploadResponse = await this.helpers.httpRequest(uploadOptions);
-						fileId = uploadResponse.id;
-					}
-				} else {
-					// Original operation handling
-					prompt = this.getNodeParameter('prompt', i) as string;
-					additionalOptions = this.getNodeParameter('additionalOptions', i) as IDataObject;
-				}
-
-				// Step 1: Handle file upload if needed
-				if (operation === 'uploadAndProcess') {
-					const inputType = this.getNodeParameter('inputType', i) as string;
-					let fileBuffer: Buffer;
-					let fileName: string;
-
-					if (inputType === 'binary') {
-						const binaryProperty = this.getNodeParameter('binaryProperty', i) as string;
-						const binaryData = this.helpers.assertBinaryData(i, binaryProperty);
-						fileBuffer = await this.helpers.getBinaryDataBuffer(i, binaryProperty);
-						fileName = binaryData.fileName || 'document.pdf';
-					} else if (inputType === 'url') {
-						// Download file from URL
-						const fileUrl = this.getNodeParameter('fileUrl', i) as string;
-						const downloadResponse = await this.helpers.httpRequest({
-							method: 'GET',
-							url: fileUrl,
-							encoding: 'arraybuffer',
-							returnFullResponse: true,
-						});
-						fileBuffer = Buffer.from(downloadResponse.body as ArrayBuffer);
-						// Try to extract filename from URL or Content-Disposition header
-						const urlParts = fileUrl.split('/');
-						fileName = urlParts[urlParts.length - 1].split('?')[0] || 'document.pdf';
-						if (downloadResponse.headers && downloadResponse.headers['content-disposition']) {
-							const match = downloadResponse.headers['content-disposition'].match(/filename="?([^";\s]+)"?/i);
-							if (match) {
-								fileName = match[1];
-							}
-						}
-					} else {
-						// File path - would need to read the file
-						const filePath = this.getNodeParameter('filePath', i) as string;
-						// eslint-disable-next-line @typescript-eslint/no-var-requires
-						const fs = require('fs').promises;
-						fileBuffer = await fs.readFile(filePath);
-						fileName = filePath.split('/').pop() || 'document.pdf';
-					}
-
-					// Create multipart form data
-					// eslint-disable-next-line @typescript-eslint/no-var-requires
-					const FormData = require('form-data');
-					const formData = new FormData();
-					formData.append('file', fileBuffer, {
-						filename: fileName,
-						contentType: 'application/pdf',
-					});
-					formData.append('purpose', additionalOptions.purpose || 'user_data');
-
-					// Upload file to OpenAI
-					const uploadOptions: IHttpRequestOptions = {
-						method: 'POST',
-						url: `${baseUrl}/v1/files`,
-						headers: {
-							'Authorization': `Bearer ${credentials.apiKey}`,
-							...formData.getHeaders(),
-						},
-						body: formData,
-					};
-
-					if (credentials.organizationId) {
-						uploadOptions.headers!['OpenAI-Organization'] = credentials.organizationId as string;
-					}
-
-					const uploadResponse = await this.helpers.httpRequest(uploadOptions);
-					fileId = uploadResponse.id;
-				} else {
-					// Use provided file ID
-					fileId = this.getNodeParameter('fileId', i) as string;
-				}
-
-				// Step 2: Call Responses API
-				const model = additionalOptions.model || 'gpt-5';
+				// Build request body
 				const requestBody: IDataObject = {
 					model,
 				};
-				
-				// Determine input structure based on whether we have files
-				if (operation === 'uploadAndProcess' || operation === 'processFileId' || (operation === 'aiToolMode' && fileId)) {
-					// Use array structure for file inputs
+
+				// Parse file inputs
+				const pdfIds = parseFileInput(pdfFiles);
+				const images = parseFileInput(imageFiles);
+
+				// Build content array for requests with files
+				const contentArray: IDataObject[] = [];
+
+				// Add text first
+				contentArray.push({
+					type: 'input_text',
+					text: prompt,
+				});
+
+				// Add PDF files
+				for (const pdfId of pdfIds) {
+					if (pdfId.startsWith('file_')) {
+						contentArray.push({
+							type: 'input_file',
+							file_id: pdfId,
+						});
+					} else if (pdfId.includes('http://') || pdfId.includes('https://')) {
+						// PDF URL
+						contentArray.push({
+							type: 'input_file',
+							file_url: pdfId,
+						});
+					}
+				}
+
+				// Add images - fix the structure based on docs
+				for (const image of images) {
+					if (image.startsWith('file_')) {
+						// File ID
+						contentArray.push({
+							type: 'input_image',
+							file_id: image,
+						});
+					} else if (image.includes('http://') || image.includes('https://')) {
+						// Image URL - corrected structure
+						contentArray.push({
+							type: 'input_image',
+							image_url: image,
+						});
+					}
+				}
+
+				// Use array structure if we have files, otherwise simple string
+				if (pdfIds.length > 0 || images.length > 0) {
 					requestBody.input = [
 						{
 							role: 'user',
-							content: [
-								{
-									type: 'input_text',
-									text: prompt,
-								},
-								{
-									type: 'input_file',
-									file_id: fileId,
-								},
-							],
+							content: contentArray,
 						},
 					];
 				} else {
-					// Use simple string input for text-only requests
+					// Text-only request - just the string
 					requestBody.input = prompt;
 				}
 
-				// Add additional files if provided
-				const additionalFileContents: IDataObject[] = [];
-				
-				// Process traditional additional files
-				if (additionalOptions.additionalFiles) {
-					const files = (additionalOptions.additionalFiles as IDataObject).files as IDataObject[];
-					if (files && files.length > 0) {
-						for (const file of files) {
-							if (file.fileSource === 'fileId') {
-								additionalFileContents.push({
-									type: 'input_file',
-									file_id: file.fileId,
-								});
-							} else if (file.fileSource === 'url') {
-								additionalFileContents.push({
-									type: 'input_image',
-									image: {
-										url: file.url,
-									},
-								});
-							}
-						}
-					}
-				}
-				
-				// Process bulk file inputs - check all three fields
-				const bulkFiles: string[] = [];
-				
-				try {
-					// 1. Check comma-separated list
-					const fileList = additionalOptions.bulkFileList as string;
-					if (fileList && fileList.trim()) {
-						const listFiles = fileList.split(',').map(f => f.trim()).filter(f => f);
-						bulkFiles.push(...listFiles);
-					}
-					
-					// 2. Check array expression field
-					const fileArray = additionalOptions.bulkFileArray;
-					if (fileArray) {
-						if (typeof fileArray === 'string' && fileArray.trim()) {
-							// Try to parse the string as JSON
-							try {
-								const parsed = JSON.parse(fileArray);
-								if (Array.isArray(parsed)) {
-									bulkFiles.push(...parsed.map(item => typeof item === 'string' ? item : String(item)));
-								}
-							} catch {
-								// Not valid JSON, might be a single URL
-								bulkFiles.push(fileArray.trim());
-							}
-						} else if (Array.isArray(fileArray)) {
-							bulkFiles.push(...fileArray.map(item => typeof item === 'string' ? item : String(item)));
-						}
-					}
-					
-					// 3. Check JSON string field
-					const jsonString = additionalOptions.bulkFileJsonString as string;
-					if (jsonString && jsonString.trim()) {
-						try {
-							const parsed = JSON.parse(jsonString);
-							if (Array.isArray(parsed)) {
-								bulkFiles.push(...parsed.map(item => typeof item === 'string' ? item : String(item)));
-							}
-						} catch (error) {
-							console.error('Failed to parse JSON array:', error);
-							// Continue without throwing to avoid breaking the workflow
-						}
-					}
-					
-					// Process each bulk file
-					for (const fileRef of bulkFiles) {
-						if (!fileRef) continue; // Skip empty entries
-						
-						const fileRefStr = String(fileRef).trim();
-						if (fileRefStr.startsWith('file_')) {
-							// It's a file ID
-							additionalFileContents.push({
-								type: 'input_file',
-								file_id: fileRefStr,
-							});
-						} else if (fileRefStr.includes('http://') || fileRefStr.includes('https://')) {
-							// It's a URL - use includes to catch URLs that might have extra characters
-							let url = fileRefStr;
-							// Try to extract URL from common patterns
-							const urlMatch = fileRefStr.match(/(https?:\/\/[^\s\]}"']+)/);
-							if (urlMatch) {
-								url = urlMatch[1];
-							}
-							additionalFileContents.push({
-								type: 'input_image',
-								image: {
-									url: url,
-								},
-							});
-						}
-					}
-				} catch (error) {
-					// Log error but continue processing
-					console.error('Error processing bulk files:', error);
-				}
-				
-				// Process all binary items if enabled
-				if (additionalOptions.processAllBinaryItems) {
-					// Upload each binary item and add to content
-					for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-						const item = items[itemIndex];
-						if (item.binary) {
-							// Process each binary property in the item
-							for (const binaryPropertyName of Object.keys(item.binary)) {
-								try {
-									const binaryData = this.helpers.assertBinaryData(itemIndex, binaryPropertyName);
-									const fileBuffer = await this.helpers.getBinaryDataBuffer(itemIndex, binaryPropertyName);
-									const fileName = binaryData.fileName || `file_${itemIndex}_${binaryPropertyName}`;
-									
-									// Upload file to OpenAI
-									// eslint-disable-next-line @typescript-eslint/no-var-requires
-									const FormData = require('form-data');
-									const formData = new FormData();
-									formData.append('file', fileBuffer, {
-										filename: fileName,
-										contentType: binaryData.mimeType || 'application/octet-stream',
-									});
-									formData.append('purpose', additionalOptions.purpose || 'user_data');
-									
-									const uploadOptions: IHttpRequestOptions = {
-										method: 'POST',
-										url: `${baseUrl}/v1/files`,
-										headers: {
-											'Authorization': `Bearer ${credentials.apiKey}`,
-											...formData.getHeaders(),
-										},
-										body: formData,
-									};
-									
-									if (credentials.organizationId) {
-										uploadOptions.headers!['OpenAI-Organization'] = credentials.organizationId as string;
-									}
-									
-									const uploadResponse = await this.helpers.httpRequest(uploadOptions);
-									additionalFileContents.push({
-										type: 'input_file',
-										file_id: uploadResponse.id,
-									});
-								} catch (error) {
-									// Continue processing other files if one fails
-									console.error(`Failed to process binary item ${itemIndex}.${binaryPropertyName}:`, error);
-								}
-							}
-						}
-					}
-				}
-				
-				// Add all additional file contents to the request
-				if (additionalFileContents.length > 0 && requestBody.input && Array.isArray(requestBody.input)) {
-					const inputArray = requestBody.input as IDataObject[];
-					const content = inputArray[0].content as IDataObject[];
-					content.push(...additionalFileContents);
-				}
-
 				// Add optional parameters
-				if (additionalOptions.maxTokens) {
-					requestBody.max_tokens = additionalOptions.maxTokens;
-				}
-				// Temperature is not supported by GPT-5 reasoning models
-				// Only add it for non-GPT-5 models
-				if (additionalOptions.temperature !== undefined && !String(model).startsWith('gpt-5')) {
-					requestBody.temperature = additionalOptions.temperature;
-				}
-				// Add reasoning and GPT-5 specific features
-				const modelString = String(model);
-				
-				// Build reasoning object if needed
-				const reasoningConfig: IDataObject = {};
-				
-				if (additionalOptions.reasoningEffort) {
-					reasoningConfig.effort = additionalOptions.reasoningEffort;
-				}
-				
-				if (additionalOptions.reasoningSummary && additionalOptions.reasoningSummary !== 'none') {
-					reasoningConfig.summary = additionalOptions.reasoningSummary;
-				}
-				
-				// Apply reasoning configuration
-				if (Object.keys(reasoningConfig).length > 0) {
-					if (modelString.startsWith('gpt-5')) {
-						// GPT-5 models use nested reasoning structure
-						requestBody.reasoning = reasoningConfig;
-					} else if (modelString.match(/^o[134]/)) {
-						// O-series models - check if they support nested structure
-						if (reasoningConfig.effort) {
-							requestBody.reasoning_effort = reasoningConfig.effort;
-						}
-						if (reasoningConfig.summary) {
-							// Try nested structure for summary
-							requestBody.reasoning = { summary: reasoningConfig.summary };
-						}
-					}
-				}
-				
-				// Add GPT-5 specific features
-				if (modelString.startsWith('gpt-5')) {
-					// Add verbosity control
-					if (additionalOptions.verbosity) {
-						if (!requestBody.text) {
-							requestBody.text = {};
-						}
-						(requestBody.text as IDataObject).verbosity = additionalOptions.verbosity;
-					}
+				if (options.maxTokens) {
+					requestBody.max_tokens = options.maxTokens;
 				}
 
-				const responseOptions: IHttpRequestOptions = {
+				// Add reasoning configuration for supported models (GPT-5 and GPT-4.1 support reasoning)
+				const modelStr = String(model);
+				if ((options.reasoningEffort || options.reasoningSummary) && 
+				    (modelStr.startsWith('gpt-5') || modelStr.startsWith('gpt-4.1'))) {
+					const reasoning: IDataObject = {};
+					
+					if (options.reasoningEffort) {
+						reasoning.effort = options.reasoningEffort;
+					}
+					
+					if (options.reasoningSummary && options.reasoningSummary !== 'none') {
+						reasoning.summary = options.reasoningSummary;
+					}
+					
+					requestBody.reasoning = reasoning;
+				}
+
+				// Make API request
+				const responseOptions: any = {
 					method: 'POST',
 					url: `${baseUrl}/v1/responses`,
 					headers: {
 						'Authorization': `Bearer ${credentials.apiKey}`,
 						'Content-Type': 'application/json',
-					},
+					} as any,
 					body: requestBody,
 					json: true,
 				};
 
 				if (credentials.organizationId) {
-					responseOptions.headers!['OpenAI-Organization'] = credentials.organizationId as string;
+					responseOptions.headers['OpenAI-Organization'] = credentials.organizationId as string;
 				}
 
 				const response = await this.helpers.httpRequest(responseOptions);
 
-				// Format the response
-				let outputData: any;
+				// Extract text from response - based on actual API docs
+				let textContent = '';
+				let reasoningSummary = null;
 				
-				// For AI Tool Mode, simplify the output
-				if (operation === 'aiToolMode') {
-					// Extract just the essential content from the response structure
-					// GPT-5 responses have structure: output[0].content[0].text
-					let textContent = '';
-					if (response.output && response.output[0]) {
-						const output = response.output[0];
-						if (output.content && output.content[0]) {
-							textContent = output.content[0].text || '';
+				// Primary structure from Responses API docs
+				if (response.output_text) {
+					textContent = response.output_text;
+				}
+				// Alternative structure with output array
+				else if (response.output && Array.isArray(response.output)) {
+					for (const output of response.output) {
+						if (output.content && Array.isArray(output.content)) {
+							for (const content of output.content) {
+								if (content.type === 'output_text' && content.text) {
+									textContent = content.text;
+									break;
+								}
+							}
+						}
+						if (textContent) break;
+					}
+				}
+				// Legacy fallback for chat completions
+				else if (response.choices?.[0]?.message?.content) {
+					textContent = response.choices[0].message.content;
+				}
+				
+				// Extract reasoning summary if present
+				if (response.reasoning && response.reasoning.summary) {
+					reasoningSummary = response.reasoning.summary;
+				}
+				// Also check in the summary array structure from docs
+				else if (response.summary && Array.isArray(response.summary)) {
+					for (const summary of response.summary) {
+						if (summary.type === 'summary_text' && summary.text) {
+							reasoningSummary = summary.text;
+							break;
 						}
 					}
-					// Fallback to other possible structures
-					if (!textContent) {
-						textContent = response.choices?.[0]?.message?.content || '';
-					}
-					
-					outputData = {
-						text: textContent,
-						fileId: fileId,
-						model: response.model || model,
-						usage: response.usage,
-					};
-				} else {
-					// Return full response with all metadata for regular operations
-					outputData = {
-						...response,
-						fileId: fileId,
-						prompt: prompt,
-					};
 				}
+
+				const outputData: IDataObject = {
+					text: textContent,
+					model: response.model || model,
+					usage: response.usage,
+					pdfCount: pdfIds.length,
+					imageCount: images.length,
+				};
+				
+				// Add reasoning summary if it exists
+				if (reasoningSummary) {
+					outputData.reasoningSummary = reasoningSummary;
+				}
+				
+				// Include full response for debugging
+				outputData.fullResponse = response;
 
 				const executionData = this.helpers.constructExecutionMetaData(
 					this.helpers.returnJsonArray(outputData),
@@ -925,12 +398,11 @@ export class OpenAiGpt5 implements INodeType {
 				returnData.push(...executionData);
 
 			} catch (error: any) {
-				// Extract meaningful error message
+				// Error handling
 				let errorMessage = 'Unknown error';
-				let errorDetails: any = {};
+				let errorDetails: IDataObject = {};
 				
 				if (error.response) {
-					// HTTP error response
 					errorMessage = error.response.statusText || `HTTP ${error.response.status}`;
 					if (error.response.body) {
 						errorDetails = error.response.body;
@@ -941,25 +413,24 @@ export class OpenAiGpt5 implements INodeType {
 				} else if (error.message) {
 					errorMessage = error.message;
 				}
-				
+
 				if (this.continueOnFail()) {
 					const executionData = this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray({ 
+						this.helpers.returnJsonArray({
 							error: errorMessage,
 							details: errorDetails,
-							statusCode: error.response?.status,
 						}),
 						{ itemData: { item: i } }
 					);
 					returnData.push(...executionData);
 					continue;
 				}
-				
+
 				const nodeError = new NodeOperationError(
-					this.getNode(), 
+					this.getNode(),
 					errorMessage,
-					{ 
-						description: errorDetails.error?.message || undefined,
+					{
+						description: (errorDetails.error as any)?.message || undefined,
 					}
 				);
 				throw nodeError;
